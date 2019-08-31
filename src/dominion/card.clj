@@ -23,44 +23,6 @@
        (map #(% player))
        (apply +)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Defining card actions, which allow for things such as draw, discard, and the like
-; to be handled.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn draw-cards-for-player [number-to-draw {:keys [hand deck discard] :as player}]
-  (if (> number-to-draw (count deck))
-    (let [drawable-now (count deck)
-          drawable-later (- number-to-draw drawable-now)
-          shuffled-discard (shuffle discard)]
-      (assoc player
-             :hand (concat hand deck (take drawable-later shuffled-discard))
-             :deck (drop drawable-later shuffled-discard)
-             :discard []))
-    (assoc player
-           :hand (concat hand (take number-to-draw deck))
-           :deck (drop number-to-draw deck))))
-
-(defn draw-cards [number-to-draw game-state player-key]
-  (let [player (get-in game-state [:players player-key])
-        updated-player (draw-cards-for-player number-to-draw player)]
-    (assoc-in game-state [:players player-key] updated-player)))
-
-(defn draw-cards-action [number-to-draw]
-  (partial draw-cards number-to-draw))
-
-(defn plus-buys-action [additional-buys]
-  (fn [game-state player-key]
-    (update-in game-state [:turn  :buys] + additional-buys)))
-
-(defn plus-money-action [additional-money]
-  (fn [game-state player-key]
-    (update-in game-state [:turn :money] + additional-money)))
-
-(defn plus-actions-action [additional-actions]
-  (fn [game-state player-key]
-    (update-in game-state [:turn :actions] + additional-actions)))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Card specifications
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -93,7 +55,3 @@
       (throw (ex-info "Invalid card created!"
                       {:explain (s/explain ::card card)
                        :card card})))))
-
-(comment
-  (new-card "Test" "Test" -2 [::treasure])
-    )
