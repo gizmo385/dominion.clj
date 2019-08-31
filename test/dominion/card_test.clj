@@ -73,26 +73,6 @@
                                     :discard []})))
     (is (= 2 (count-victory-points {:hand (repeat
                                             2
-                                            (new-card
-                                              "T" "T" 0 [::c/action] :vp (card-count-vp 10 1)))
+                                            (new-card "T" "T" 0 [::c/action] :vp (card-count-vp 10 1)))
                                     :deck (repeat 9 (new-card "T" "T" 0 [::c/action]))
-                                    :discard []})))
-    ))
-
-(deftest common-actions-test
-  (let [game-state {:players {:player1 base-player}}]
-    (testing "Additional buys"
-      (is (-> (plus-buys-action 1)
-              (apply [game-state :player1])
-              (get-in [:players :player1 :buys])
-              (= 2))))
-    (testing "Additional actions"
-      (is (-> (plus-actions-action 1)
-              (apply [game-state :player1])
-              (get-in [:players :player1 :actions])
-              (= 2))))
-    (testing "Additional money"
-      (is (-> (plus-money-action 1)
-              (apply [game-state :player1])
-              (get-in [:players :player1 :money])
-              (= 1))))))
+                                    :discard []})))))

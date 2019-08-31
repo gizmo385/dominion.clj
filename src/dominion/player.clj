@@ -9,17 +9,11 @@
 (s/def ::hand (s/* ::c/card))
 (s/def ::discard (s/* ::c/card))
 (s/def ::deck (s/* ::c/card))
-(s/def ::money int?)
-(s/def ::actions int?)
-(s/def ::buys int?)
 
 (s/def ::player
-  (s/keys :req-un [::hand ::discard ::deck ::buys ::actions ::money]))
+  (s/keys :req-un [::hand ::discard ::deck]))
 
 (def base-player
   {:hand []
    :deck []
-   :discard []
-   :money 0
-   :buys 1
-   :actions 1})
+   :discard []})

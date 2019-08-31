@@ -48,19 +48,6 @@
 (defn draw-cards-action [number-to-draw]
   (partial draw-cards number-to-draw))
 
-(defn plus-buys-action [additional-buys]
-  (fn [game-state player-key]
-    (update-in game-state [:players player-key :buys] + additional-buys)))
-
-(defn plus-money-action [additional-money]
-  (fn [game-state player-key]
-    (update-in game-state [:players player-key :money] + additional-money)))
-
-(defn plus-actions-action [additional-actions]
-  (fn [game-state player-key]
-    (update-in game-state [:players player-key :actions] + additional-actions)))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Card specifications
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
