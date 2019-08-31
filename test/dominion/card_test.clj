@@ -1,6 +1,7 @@
 (ns dominion.card-test
   (:require [clojure.test :refer :all]
             [dominion.card :refer :all :as c]
+            [dominion.game :refer :all]
             [dominion.player :refer :all]))
 
 (deftest new-card-validation
@@ -76,3 +77,16 @@
                                             (new-card "T" "T" 0 [::c/action] :vp (card-count-vp 10 1)))
                                     :deck (repeat 9 (new-card "T" "T" 0 [::c/action]))
                                     :discard []})))))
+
+(deftest turn-modifying-actions-test
+  (testing "Card actions which modify turn attributes"
+    (let [game-state {:turn {:buys 1 :money 0 :actions 1}}
+          plus-buys (plus-buys-action 1)
+          plus-actions (plus-actions-action 1)
+          plus-money (plus-money-action 1)]
+      (is (= (-> game-state (plus-buys :test))
+             (update-in game-state [:turn :buys] inc)))
+      (is (= (-> game-state (plus-actions :test))
+             (update-in game-state [:turn :actions] inc)))
+      (is (= (-> game-state (plus-money :test))
+             (update-in game-state [:turn :money] inc))))))
