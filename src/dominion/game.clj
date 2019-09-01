@@ -16,10 +16,10 @@
 (s/def ::players (s/map-of keyword? ::p/player))
 (s/def ::supply (s/map-of keyword? (s/* ::c/card)))
 (s/def ::trash (s/* ::c/card))
-(s/def ::current-player (s/nilable keyword?))
+(s/def ::player-order (s/+ keyword?))
 
 (s/def ::game-state
-  (s/keys :req-un [::players ::supply ::trash ::current-player ::turn]))
+  (s/keys :req-un [::players ::supply ::trash ::player-order ::turn]))
 
 
 (def default-turn
@@ -30,18 +30,42 @@
   "Create a new game state, supplying information about the current players, the supply, and the
   trash. Additionally, the current turn can be modified by supplying different values for the
   amount of buys/actions/money that the current player has."
-  [players supply trash current-player & {:keys [buys actions money] :as turn-info}]
+  [players supply trash player-order & {:keys [buys actions money] :as turn-info}]
   (let [turn (merge default-turn turn-info)
         gs {:players players
             :supply supply
             :trash trash
-            :current-player current-player
+            :player-order player-order
             :turn turn}]
     (if (s/valid? ::game-state gs)
       (s/conform ::game-state gs)
       (throw (ex-info "Invalid game state!"
                       {:explain (s/explain ::game-state gs)
                        :game-state gs})))))
+
+
+(defn build-supply
+  "Given a number of supply decks to build, a size for each supply deck, and a series
+  of card sets; builds a final supply map with a randomly selected supply.
+
+  A card set should be a map where the keys are keywords (shorthand card name) and the
+  values are the cards themselves."
+  [supply-size card-count & kingdom-card-sets]
+  (->> kingdom-card-sets
+       (apply merge)
+       (into [])
+       (shuffle)
+       (take supply-size)
+       (map (fn [[card-key card]]
+              [card-key (repeat card-count card)]))
+       (into {})))
+
+(defn build-game
+  "Given a list of players and a card set to use as the supply, builds an initial
+  game state to build upon for the rest of the game."
+  [players supply]
+  (let [player-order (-> players keys shuffle)]
+    (new-game-state players supply [] player-order)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Playing cards

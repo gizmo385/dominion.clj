@@ -9,7 +9,7 @@
         test-gs (new-game-state {:p1 p/base-player}
                                 {:c1 (repeat 2 test-card)}
                                 []
-                                :p1
+                                [:p1]
                                 :money 2)]
     (testing "Can buy cards that are available"
       (let [post-buy-gs (buy-card test-gs :p1 :c1)]
