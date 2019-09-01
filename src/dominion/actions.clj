@@ -45,8 +45,8 @@
 (defn build
   "Helper function for easily defining multiple card actions"
   [& {:keys [buys money actions draw]}]
-  (->> [(if buys (plus-buys-action buys))
-        (if money (plus-money-action money))
-        (if draw (draw-cards-action draw))
-        (if actions (plus-actions-action actions))]
-       (filter some?)))
+  (cond-> '()
+    draw (conj (draw-cards-action draw))
+    money (conj (plus-money-action money))
+    buys (conj (plus-buys-action buys))
+    actions (conj (plus-actions-action actions))))
