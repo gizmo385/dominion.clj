@@ -52,6 +52,33 @@
   [game-state player-key actions]
   (reduce (fn [gs a] (a gs player-key)) game-state actions))
 
-(defn play-card [game-state player-key card]
+(defn play-card
+  "Evaluate all of the possible results of a card being played in a game"
+  [game-state player-key card]
   (-> game-state
       (evaluate-actions player-key (:actions card))))
+
+(defn buy-card
+  "Attempt to purchase a card from the supply for a particular player"
+  [game-state player-key card-keyword]
+  (let [available-money (-> game-state :turn :money)
+        available-buys (-> game-state :turn :buys)
+        card-supply (-> game-state :supply (get card-keyword))
+        card (first card-supply)]
+    (map println [available-money available-buys card-supply card])
+    (cond
+      (not (pos? available-buys))
+      (throw (ex-info "The player has no more buys left!" {:gs game-state}))
+
+      (empty? card-supply)
+      (throw (ex-info "No more cards of that type in the supply!" {:gs game-state}))
+
+      (< available-money (:cost card))
+      (throw (ex-info "The player cannot afford this card!" {:gs game-state}))
+
+      :else
+      (-> game-state
+          (update-in [:players player-key :discard] conj card)
+          (update-in [:turn :money] - (:cost card))
+          (update-in [:turn :buys] dec)
+          (update-in [:supply card-keyword] rest)))))
