@@ -5,19 +5,15 @@
     [dominion.card :as c]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Basic cards
+; Default victory cards
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def estate (c/new-card "Estate" "" 2 [::c/victory] :vp (c/raw-vp 1)))
 (def duchy (c/new-card "Duchy" "" 5 [::c/victory] :vp (c/raw-vp 3)))
 (def province (c/new-card "Province" "" 8 [::c/victory] :vp (c/raw-vp 3)))
 
-(def garden
-  (c/new-card
-    "Gardens" "Worth 1VP per 10 cards (rounded down)."
-    4
-    [::c/victory]
-    :vp (c/card-count-vp 10 1)))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Default treasure cards
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def copper (c/new-card "Copper" "" 0 [::c/treasure] :actions (a/build :money 1)))
 (def silver (c/new-card "Silver" "" 3 [::c/treasure] :actions (a/build :money 2)))
 (def gold (c/new-card "Gold" "" 6 [::c/treasure] :actions (a/build :money 3)))
@@ -56,6 +52,25 @@
     [::c/action]
     :actions (a/build :actions 2 :buys 1 :money 2)))
 
+(def garden
+  (c/new-card
+    "Gardens" "Worth 1VP per 10 cards (rounded down)."
+    4
+    [::c/victory]
+    :vp (c/card-count-vp 10 1)))
 
 (def available-cards
-  [smithy laboratory village market festival])
+  {:smithy smithy
+   :laboratory laboratory
+   :village village
+   :market market
+   :festival festival
+   :garden garden})
+
+(def required-cards
+  {:copper copper
+   :silver silver
+   :gold gold
+   :estate estate
+   :duchy duchy
+   :province province})
