@@ -14,7 +14,11 @@
     (testing "Can buy cards that are available"
       (let [post-buy-gs (buy-card test-gs :p1 :c1)]
         (is (= 1 (-> post-buy-gs :supply :c1 count)))
-        (is (= 1 (-> post-buy-gs :players :p1 :discard count)))))
+        (is (= 1 (-> post-buy-gs :players :p1 :discard count)))
+        (is (= (-> post-buy-gs :turn :money)
+               (-> test-gs :turn :money (- (:cost test-card)))))
+        (is (= (-> post-buy-gs :turn :buys)
+               (-> test-gs :turn :buys dec)))))
     (testing "Cannot buy cards without enough money"
       (let [poor-gs (assoc-in test-gs [:turn :money] 0)]
         (is (thrown? Exception (buy-card poor-gs :p1 :c1)))))
