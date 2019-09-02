@@ -5,20 +5,6 @@
     [dominion.card :as c]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Default victory cards
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def estate (c/new-card "Estate" "" 2 [::c/victory] :vp (c/raw-vp 1)))
-(def duchy (c/new-card "Duchy" "" 5 [::c/victory] :vp (c/raw-vp 3)))
-(def province (c/new-card "Province" "" 8 [::c/victory] :vp (c/raw-vp 3)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Default treasure cards
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def copper (c/new-card "Copper" "" 0 [::c/treasure] :actions (a/build :money 1)))
-(def silver (c/new-card "Silver" "" 3 [::c/treasure] :actions (a/build :money 2)))
-(def gold (c/new-card "Gold" "" 6 [::c/treasure] :actions (a/build :money 3)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Kingdom Cards
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def smithy
@@ -66,11 +52,3 @@
    :market market
    :festival festival
    :garden garden})
-
-(def required-cards
-  {:copper copper
-   :silver silver
-   :gold gold
-   :estate estate
-   :duchy duchy
-   :province province})
