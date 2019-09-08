@@ -12,7 +12,8 @@
 (s/def ::buys (s/and int? (complement neg?)))
 (s/def ::actions (s/and int? (complement neg?)))
 (s/def ::money (s/and int? (complement neg?)))
-(s/def ::turn (s/keys :req-un [::buys ::actions ::money]))
+(s/def ::played (s/* ::c/card))
+(s/def ::turn (s/keys :req-un [::buys ::actions ::money ::played]))
 
 (s/def ::players (s/map-of keyword? ::p/player))
 (s/def ::supply (s/map-of keyword? (s/* ::c/card)))
@@ -27,7 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def default-turn
   "This is the default values for the turn attributes on any given new-turn."
-  {:buys 1 :actions 1 :money 0})
+  {:buys 1 :actions 1 :money 0 :played '()})
 
 
 (def player-starting-deck
@@ -106,10 +107,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn next-turn [gs]
   (let [players (:players gs)
-        current-player (->> gs :player-order first (get players))]
+        current-player (->> gs :player-order first (get players))
+        turn (:turn gs)]
     (as-> gs gs
       ;; Rotate the player order
       (update gs :player-order u/rotate-list)
+      ;; Move the played cards to the discard pile
+      (update-in gs [:players current-player :discard] concat (:played turn))
       ;; Reset the turn counters so the next player has the correct number of buys,
       ;; actions, and money.
       (assoc gs :turn default-turn)
@@ -124,16 +128,29 @@
 ; Game state modification functions for actions taken during a game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- evaluate-actions
-  "Given a game state, the current player, and a series of actions, evaluates those actions against
-  the current game state, updating the game state and returning back the new state of the game."
+  "Given a game state, the current player, and a series of actions, evaluates those
+  actions against the current game state, updating the game state and returning back
+  the new state of the game."
   [game-state player-key actions]
   (reduce (fn [gs a] (a gs player-key)) game-state actions))
+
+(defn- remove-card-from-hand
+  "Removes the card from the specified players hand and returns the updated game state."
+  [game-state player-key card]
+  (update-in game-state
+             [:players player-key :hand]
+             #(u/remove-once %1 #{card})))
 
 (defn play-card
   "Evaluate all of the possible results of a card being played in a game"
   [game-state player-key card]
   (-> game-state
-      (evaluate-actions player-key (:actions card))))
+      ;; Evaluate any actions present on the card
+      (evaluate-actions player-key (:actions card))
+      ;; Remove the card from the player's hand
+      (update-in [:players player-key :hand] #(u/remove-once %1 #{card}))
+      ;; Move the card to the :played section of the turn
+      (update-in [:turn :played] conj card)))
 
 (defn buy-card
   "Attempt to purchase a card from the supply for a particular player"
