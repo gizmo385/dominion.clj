@@ -12,3 +12,14 @@
   updated map."
   [f m]
   (into {} (for [[k v] m] [k (f v)])))
+
+(defn remove-once
+  "Returns a lazy sequence removing the first item that matches `pred` inside `coll`"
+  [pred coll]
+  (letfn [(inner [coll]
+            (lazy-seq
+              (when-let [[x & xs] (seq coll)]
+                (if (pred x)
+                  xs
+                  (cons x (inner xs))))))]
+    (inner coll)))
