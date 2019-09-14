@@ -13,7 +13,9 @@
 (s/def ::actions (s/and int? (complement neg?)))
 (s/def ::money (s/and int? (complement neg?)))
 (s/def ::played (s/* ::c/card))
-(s/def ::turn (s/keys :req-un [::buys ::actions ::money ::played]))
+(s/def ::selected (s/* ::c/card))
+(s/def ::staged-card (s/nilable ::c/card))
+(s/def ::turn (s/keys :req-un [::buys ::actions ::money ::played ::selected]))
 
 (s/def ::players (s/map-of keyword? ::p/player))
 (s/def ::supply (s/map-of keyword? (s/* ::c/card)))
@@ -28,7 +30,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def default-turn
   "This is the default values for the turn attributes on any given new-turn."
-  {:buys 1 :actions 1 :money 0 :played '()})
+  {:buys 1 :actions 1 :money 0 :played '() :selected '() :staged-card nil})
 
 
 (def player-starting-deck
@@ -134,23 +136,58 @@
   [game-state player-key actions]
   (reduce (fn [gs a] (a gs player-key)) game-state actions))
 
-(defn- remove-card-from-hand
-  "Removes the card from the specified players hand and returns the updated game state."
+(defn deselect-card
+  "Deselects a card, moving it from the 'selected' state of the turn back to the
+  player's hand"
   [game-state player-key card]
-  (update-in game-state
-             [:players player-key :hand]
-             #(u/remove-once %1 #{card})))
+  (-> game-state
+      (update-in [:players player-key :hand] conj card)
+      (update-in [:turn :selected] #(u/remove-once #{card} %1))))
+
+(defn select-card
+   "Selects a card, moving it from the players hand to the selected state in the
+   current turn. Card selection is leveraged by cards that have a pending state."
+  [game-state player-key card]
+  (-> game-state
+      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
+      (update-in [:turn :selected] conj card)))
 
 (defn play-card
-  "Evaluate all of the possible results of a card being played in a game"
+  "Evaluate all of the possible results of a card being played in a game."
   [game-state player-key card]
   (-> game-state
       ;; Evaluate any actions present on the card
       (evaluate-actions player-key (:actions card))
       ;; Remove the card from the player's hand
-      (update-in [:players player-key :hand] #(u/remove-once %1 #{card}))
+      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
       ;; Move the card to the :played section of the turn
       (update-in [:turn :played] conj card)))
+
+(defn unstage-card
+  "'Unstage' the currently staged card, if present."
+  [game-state player-key]
+  (if-let [staged-card (-> game-state :turn :staged-card)]
+    (-> game-state
+        (update-in [:players player-key :hand] conj staged-card)
+        (assoc-in [:turn :staged-card] nil))
+    game-state))
+
+(defn stage-card
+  "'Stage' a card allowing it to be later evaluated against yet-to-be-selected cards
+  from the players hand."
+  [game-state player-key card]
+  (-> game-state
+      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
+      (assoc-in [:turn :staged-card] card)))
+
+(defn evaluate-staged-card
+  "Evaluates the currently staged card for the turn, if one is present."
+  [game-state player-key]
+  (if-let [staged-card (-> game-state :turn :staged-card)]
+    (-> game-state
+        (assoc-in [:turn :staged-card] nil)
+        (play-card player-key staged-card))
+    game-state))
 
 (defn buy-card
   "Attempt to purchase a card from the supply for a particular player"
