@@ -85,15 +85,11 @@
 
   A card set should be a map where the keys are keywords (shorthand card name) and the
   values are the cards themselves."
-  [supply-size card-count & kingdom-card-sets]
-  (->> kingdom-card-sets
-       (apply merge)
-       (into [])
-       (shuffle)
+  [supply-size card-count kingdom-cards]
+  (->> kingdom-cards
+       (map (partial repeat card-count))
        (take supply-size)
-       (map (fn [[card-key card]]
-              [card-key (repeat card-count card)]))
-       (into {})))
+       (zipmap (map :key kingdom-cards))))
 
 (defn build-game
   "Given a list of players and a card set to use as the supply, builds an initial

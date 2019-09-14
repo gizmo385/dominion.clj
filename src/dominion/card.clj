@@ -1,6 +1,8 @@
 (ns dominion.card
-  (:require [clojure.spec.alpha :as s]
-            [dominion.actions :as a]))
+  (:require
+    [clojure.string :as string]
+    [clojure.spec.alpha :as s]
+    [dominion.actions :as a]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Victory point implementations
@@ -32,6 +34,7 @@
 
 (s/def ::title string?)
 (s/def ::description string?)
+(s/def ::key keyword?)
 (s/def ::cost (s/and int? (complement neg?)))
 (s/def ::card-types (s/+ card-types))
 
@@ -39,14 +42,18 @@
 (s/def ::vp (s/nilable fn?))
 
 (s/def ::card
-  (s/keys :req-un [::title ::description ::cost ::card-types ::actions ::vp]))
+  (s/keys :req-un [::title ::key ::description ::cost ::card-types ::actions ::vp]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Generic card constructor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn new-card
-  [title description cost types & {:keys [vp actions]}]
-  (let [card {:title title
+  [title description cost types & {:keys [vp actions key]}]
+  (let [card-key (if (keyword? key)
+                   key
+                   (-> title string/lower-case keyword))
+        card {:title title
+              :key card-key
               :description description
               :cost cost
               :card-types types
@@ -74,10 +81,10 @@
   builtin cards that should be added to any game of dominion. Additionally, a value
   can be supplied for the number of treasure cards added to the game."
   [vp-count curse-count & {:keys [treasure-count] :or {treasure-count 100}}]
-  {:estate (repeat vp-count estate)
-   :duchy (repeat vp-count duchy)
-   :province (repeat vp-count province)
-   :curse (repeat curse-count curse)
-   :copper (repeat treasure-count copper)
-   :silver (repeat treasure-count silver)
-   :gold (repeat treasure-count gold)})
+  {(:key estate) (repeat vp-count estate)
+   (:key duchy) (repeat vp-count duchy)
+   (:key province) (repeat vp-count province)
+   (:key curse) (repeat curse-count curse)
+   (:key copper) (repeat treasure-count copper)
+   (:key silver) (repeat treasure-count silver)
+   (:key gold) (repeat treasure-count gold)})
