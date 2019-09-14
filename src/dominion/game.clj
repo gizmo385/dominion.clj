@@ -122,6 +122,19 @@
       ;; Draw 5 new cards for the current player
       (a/draw-cards 5 gs current-player))))
 
+(defn game-over?
+  "Given a game state, returns whether or not the game is over. In Dominion, a game
+  ends for one of two reasons:
+    1: There are zero provinces left in the supply
+    2: There are three separate supply stacks with zero cards left."
+  [game-state]
+  (let [supply-counts (->> game-state :supply (u/map-values count))
+        province-count (get supply-counts (:key c/province))
+        empty-supplies (filter (fn [[card card-count]] (zero? card-count))
+                               supply-counts)]
+    (or (zero? province-count)
+        (->> empty-supplies count (= 3)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Game state modification functions for actions taken during a game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

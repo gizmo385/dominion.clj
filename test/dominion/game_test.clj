@@ -28,3 +28,24 @@
     (testing "Cannot buy cards without any buys"
       (let [no-buys-gs (assoc-in test-gs [:turn :buys] 0)]
         (is (thrown? Exception (buy-card no-buys-gs :p1 :c1)))))))
+
+(deftest game-over-conditions
+  (let [test-gs (build-game {:p1 p/base-player :p2 p/base-player} {})]
+    (testing "game-over? returns false for games which have not ended"
+      (is (not (game-over? test-gs)))
+      (is (not (-> test-gs (assoc-in [:supply (:key c/estate)] '()) game-over?)))
+      (is (not (-> test-gs
+                   (assoc-in [:supply (:key c/estate)] '())
+                   (assoc-in [:supply (:key c/duchy)] '())
+                   game-over?))))
+
+    (testing "Running out of provinces in the supply ends the game"
+      (is (-> test-gs (assoc-in [:supply (:key c/province)] '()) game-over?)))
+
+    (testing "Running out of three non-province cards in the supply ends the game"
+      (is (-> test-gs
+              (assoc-in [:supply (:key c/copper)] '())
+              (assoc-in [:supply (:key c/silver)] '())
+              (assoc-in [:supply (:key c/gold)] '())
+              game-over?)))))
+
