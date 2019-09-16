@@ -15,7 +15,8 @@
 (s/def ::played (s/* ::c/card))
 (s/def ::selected (s/* ::c/card))
 (s/def ::staged-card (s/nilable ::c/card))
-(s/def ::turn (s/keys :req-un [::buys ::actions ::money ::played ::selected]))
+(s/def ::turn
+  (s/keys :req-un [::buys ::actions ::money ::played ::selected ::staged-card]))
 
 (s/def ::players (s/map-of keyword? ::p/player))
 (s/def ::supply (s/map-of keyword? (s/* ::c/card)))
@@ -80,11 +81,8 @@
                        :game-state gs})))))
 
 (defn build-supply
-  "Given a number of supply decks to build, a size for each supply deck, and a series
-  of card sets; builds a final supply map with a randomly selected supply.
-
-  A card set should be a map where the keys are keywords (shorthand card name) and the
-  values are the cards themselves."
+  "Given a number of supply decks to build, a size for each supply deck, and the list of
+  cards from which to build the supply."
   [supply-size card-count kingdom-cards]
   (->> kingdom-cards
        (map (partial repeat card-count))
@@ -101,8 +99,17 @@
     (new-game-state players-with-decks supply-with-builtin-cards [] player-order)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Turn progression
+; Turn/Game Progression
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn turn-over?
+  "Given a game state, determines if the current turn is over."
+  [gs]
+  (and
+    (every? zero? [(-> gs :turn :buys)
+                   (-> gs :turn :actions)])
+    (-> gs :turn :selected empty?)
+    (-> gs :turn :staged-card nil?)))
+
 (defn next-turn [gs]
   (let [players (:players gs)
         current-player (->> gs :player-order first (get players))

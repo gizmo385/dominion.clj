@@ -49,3 +49,20 @@
               (assoc-in [:supply (:key c/gold)] '())
               game-over?)))))
 
+(deftest turn-over-conditions
+  (let [test-gs (build-game {:p1 p/base-player} {})]
+    (testing "Game is not over at start of turn"
+      (is (not (turn-over? test-gs))))
+
+    (testing "Test mid-turn zero states"
+      (is (not (turn-over? (assoc-in test-gs [:turn :buys] 0))))
+      (is (not (turn-over? (assoc-in test-gs [:turn :actions] 0))))
+      (is (not (turn-over? (-> test-gs
+                               (assoc-in [:turn :buys] 0)
+                               (assoc-in [:turn :actions] 0)
+                               (assoc-in [:turn :staged-card] c/estate))))))
+
+    (testing "Correctly identifies turn-end state"
+      (is (turn-over? (-> test-gs
+                          (assoc-in [:turn :buys] 0)
+                          (assoc-in [:turn :actions] 0)))))))
