@@ -46,9 +46,5 @@
     :vp (c/card-count-vp 10 1)))
 
 (def available-cards
-  {:smithy smithy
-   :laboratory laboratory
-   :village village
-   :market market
-   :festival festival
-   :garden garden})
+  "Cards that are defined in the base game of dominion"
+  [smithy laboratory village market festival garden])
