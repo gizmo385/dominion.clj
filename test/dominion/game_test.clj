@@ -66,3 +66,34 @@
       (is (turn-over? (-> test-gs
                           (assoc-in [:turn :buys] 0)
                           (assoc-in [:turn :actions] 0)))))))
+
+(deftest stage-card-testing
+  (let [test-gs (build-game {:p1 p/base-player} {})
+        staged-card-gs (stage-card test-gs :p1 c/copper)]
+    (testing "Staging a card works"
+      (is (-> test-gs :players :p1 :hand count (= 5)))
+      (is (-> test-gs :turn :staged-card nil?))
+      (is (-> staged-card-gs :players :p1 :hand count (= 4)))
+      (is (-> staged-card-gs :turn :staged-card some?)))
+
+    (testing "Unstaging a card inverts staging a card")))
+
+(deftest select-card-testing
+  (let [test-gs (build-game {:p1 p/base-player} {})
+        select-one-card-gs (-> test-gs
+                               (select-card :p1 c/copper))
+        select-two-card-gs (-> test-gs
+                               (select-card :p1 c/copper)
+                               (select-card :p1 c/copper))]
+
+    (testing "Selecting cards works"
+      (is (-> test-gs :players :p1 :hand count (= 5)))
+      (is (-> test-gs :turn :selected empty?))
+      (is (-> select-one-card-gs :players :p1 :hand count (= 4)))
+      (is (-> select-one-card-gs :turn :selected count (= 1)))
+      (is (-> select-two-card-gs :players :p1 :hand count (= 3)))
+      (is (-> select-two-card-gs :turn :selected count (= 2))))
+
+    (testing "Unselected a card inverts selecting a card")))
+
+(deftest play-card-testing)
