@@ -1,4 +1,14 @@
 (ns dominion.card
+  "Defines how cards are structured in Dominion, along with functions to easily define
+  them. This namespace also defines a handful of base cards that are required in
+  Dominion regardless of which expansion is being used:
+    Copper
+    Silver
+    Gold
+    Estate
+    Duchy
+    Province
+    Curse"
   (:require
     [clojure.string :as string]
     [clojure.spec.alpha :as s]

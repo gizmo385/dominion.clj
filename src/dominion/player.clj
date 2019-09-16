@@ -1,4 +1,6 @@
 (ns dominion.player
+  "Defining how the player is structured in Dominion, as well as other related
+  functions."
   (:require
     [clojure.spec.alpha :as s]
     [dominion.card :as c]))

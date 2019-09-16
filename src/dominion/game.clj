@@ -1,4 +1,6 @@
 (ns dominion.game
+  "Defines the structure of the current Dominion game state, as well as functions to
+  transition between those game states for common game actions."
   (:require
     [clojure.spec.alpha :as s]
     [dominion.actions :as a]

@@ -1,4 +1,9 @@
-(ns dominion.actions)
+(ns dominion.actions
+  "Helper functions for defining actions on cards in Dominion, such as:
+
+    1. Card draw actions
+    2. + Money/Buys/Actions cards
+    3. A keyword based builder function for the above action types.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Card draw actions

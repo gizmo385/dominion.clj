@@ -1,4 +1,13 @@
 (ns dominion.expansions.base
+  "Defines cards that were present in the base Dominion game, except for the following
+  cards that are defined the dominion.card namespace:
+    Copper
+    Silver
+    Gold
+    Estate
+    Duchy
+    Provinces
+    Curses"
   (:require
     [clojure.spec.alpha :as s]
     [dominion.actions :as a]
