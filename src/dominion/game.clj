@@ -151,66 +151,74 @@
   "Given a game state, the current player, and a series of actions, evaluates those
   actions against the current game state, updating the game state and returning back
   the new state of the game."
-  [game-state player-key actions]
-  (reduce (fn [gs a] (a gs player-key)) game-state actions))
+  [game-state actions & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (reduce (fn [gs a] (a gs pk)) game-state actions)))
 
 (defn deselect-card
   "Deselects a card, moving it from the 'selected' state of the turn back to the
   player's hand"
-  [game-state player-key card]
-  (-> game-state
-      (update-in [:players player-key :hand] conj card)
-      (update-in [:turn :selected] #(u/remove-once #{card} %1))))
+  [game-state card & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (-> game-state
+        (update-in [:players pk :hand] conj card)
+        (update-in [:turn :selected] #(u/remove-once #{card} %1)))))
 
 (defn select-card
    "Selects a card, moving it from the players hand to the selected state in the
    current turn. Card selection is leveraged by cards that have a pending state."
-  [game-state player-key card]
-  (-> game-state
-      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
-      (update-in [:turn :selected] conj card)))
+  [game-state card & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (-> game-state
+        (update-in [:players pk :hand] #(u/remove-once #{card} %1))
+        (update-in [:turn :selected] conj card))))
 
 (defn play-card
   "Evaluate all of the possible results of a card being played in a game."
-  [game-state player-key card]
-  (-> game-state
-      ;; Evaluate any actions present on the card
-      (evaluate-actions player-key (:actions card))
-      ;; Remove the card from the player's hand
-      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
-      ;; Move the card to the :played section of the turn
-      (update-in [:turn :played] conj card)))
+  [game-state card & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (-> game-state
+        ;; Evaluate any actions present on the card
+        (evaluate-actions (:actions card))
+        ;; Remove the card from the player's hand
+        (update-in [:players pk :hand] #(u/remove-once #{card} %1))
+        ;; Move the card to the :played section of the turn
+        (update-in [:turn :played] conj card))))
 
 (defn unstage-card
   "'Unstage' the currently staged card, if present."
-  [game-state player-key]
+  [game-state & {:keys [player-key]}]
   (if-let [staged-card (-> game-state :turn :staged-card)]
-    (-> game-state
-        (update-in [:players player-key :hand] conj staged-card)
-        (assoc-in [:turn :staged-card] nil))
+    (let [pk (or player-key (-> game-state :player-order first))]
+      (-> game-state
+          (update-in [:players pk :hand] conj staged-card)
+          (assoc-in [:turn :staged-card] nil)))
     game-state))
 
 (defn stage-card
   "'Stage' a card allowing it to be later evaluated against yet-to-be-selected cards
   from the players hand."
-  [game-state player-key card]
-  (-> game-state
-      (update-in [:players player-key :hand] #(u/remove-once #{card} %1))
-      (assoc-in [:turn :staged-card] card)))
+  [game-state card & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (-> game-state
+        (update-in [:players pk :hand] #(u/remove-once #{card} %1))
+        (assoc-in [:turn :staged-card] card))))
 
 (defn evaluate-staged-card
   "Evaluates the currently staged card for the turn, if one is present."
-  [game-state player-key]
+  [game-state & {:keys [player-key]}]
   (if-let [staged-card (-> game-state :turn :staged-card)]
-    (-> game-state
-        (assoc-in [:turn :staged-card] nil)
-        (play-card player-key staged-card))
+    (let [pk (or player-key (-> game-state :player-order first))]
+      (-> game-state
+          (assoc-in [:turn :staged-card] nil)
+          (play-card pk staged-card)))
     game-state))
 
 (defn buy-card
   "Attempt to purchase a card from the supply for a particular player"
-  [game-state player-key card-keyword]
-  (let [available-money (-> game-state :turn :money)
+  [game-state card-keyword & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))
+        available-money (-> game-state :turn :money)
         available-buys (-> game-state :turn :buys)
         card-supply (-> game-state :supply (get card-keyword))
         card (first card-supply)]
@@ -226,7 +234,7 @@
 
       :else
       (-> game-state
-          (update-in [:players player-key :discard] conj card)
+          (update-in [:players pk :discard] conj card)
           (update-in [:turn :money] - (:cost card))
           (update-in [:turn :buys] dec)
           (update-in [:supply card-keyword] rest)))))

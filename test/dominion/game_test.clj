@@ -12,7 +12,7 @@
                                 [:p1]
                                 :money 2)]
     (testing "Can buy cards that are available"
-      (let [post-buy-gs (buy-card test-gs :p1 :c1)]
+      (let [post-buy-gs (buy-card test-gs :c1)]
         (is (= 1 (-> post-buy-gs :supply :c1 count)))
         (is (= 1 (-> post-buy-gs :players :p1 :discard count)))
         (is (= (-> post-buy-gs :turn :money)
@@ -21,13 +21,13 @@
                (-> test-gs :turn :buys dec)))))
     (testing "Cannot buy cards without enough money"
       (let [poor-gs (assoc-in test-gs [:turn :money] 0)]
-        (is (thrown? Exception (buy-card poor-gs :p1 :c1)))))
+        (is (thrown? Exception (buy-card poor-gs :c1)))))
     (testing "Cannot buy cards without supply"
       (let [empty-supply-gs (assoc-in test-gs [:supply :c1] [])]
-        (is (thrown? Exception (buy-card empty-supply-gs :p1 :c1)))))
+        (is (thrown? Exception (buy-card empty-supply-gs :c1)))))
     (testing "Cannot buy cards without any buys"
       (let [no-buys-gs (assoc-in test-gs [:turn :buys] 0)]
-        (is (thrown? Exception (buy-card no-buys-gs :p1 :c1)))))))
+        (is (thrown? Exception (buy-card no-buys-gs :c1)))))))
 
 (deftest game-over-conditions
   (let [test-gs (build-game {:p1 p/base-player :p2 p/base-player} {})]
@@ -69,7 +69,7 @@
 
 (deftest stage-card-testing
   (let [test-gs (build-game {:p1 p/base-player} {})
-        staged-card-gs (stage-card test-gs :p1 c/copper)]
+        staged-card-gs (stage-card test-gs c/copper)]
     (testing "Staging a card works"
       (is (-> test-gs :players :p1 :hand count (= 5)))
       (is (-> test-gs :turn :staged-card nil?))
@@ -81,10 +81,10 @@
 (deftest select-card-testing
   (let [test-gs (build-game {:p1 p/base-player} {})
         select-one-card-gs (-> test-gs
-                               (select-card :p1 c/copper))
+                               (select-card c/copper))
         select-two-card-gs (-> test-gs
-                               (select-card :p1 c/copper)
-                               (select-card :p1 c/copper))]
+                               (select-card c/copper)
+                               (select-card c/copper))]
 
     (testing "Selecting cards works"
       (is (-> test-gs :players :p1 :hand count (= 5)))
