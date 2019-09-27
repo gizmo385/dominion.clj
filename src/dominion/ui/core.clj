@@ -31,14 +31,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defprotocol GameStateManager
   (get-state* [this])
-  (update-state* [this update-fn & args]))
+  (update-state* [this update-fn args]
+                 [this update-fn args callback]))
 
 (defrecord AtomGameStateManager [game-state]
   GameStateManager
   (get-state* [this] @(:game-state this))
-  (update-state* [this update-fn & args]
+  (update-state* [this update-fn args]
     (let [current-state (get-state* this)]
-      (apply swap! (:game-state this) update-fn current-state args))))
+      (apply swap! (:game-state this) update-fn current-state args)))
+  (update-state* [this update-fn args callback]
+    (update-state* this update-fn args)
+    (callback this)))
 
 
 (def ^:dynamic *game-state-manager*
@@ -54,11 +58,14 @@
   state manager for multiplayer games connected to a centralized server."
   nil)
 
- (defn get-state []
+(defn get-state []
   (get-state* *game-state-manager*))
 
-(defn update-state [update-fn & args]
-  (apply update-state* *game-state-manager* update-fn args))
+(defn update-state
+  ([update-fn args]
+   (update-state* *game-state-manager* update-fn args))
+  ([update-fn args callback]
+   (update-state* *game-state-manager* update-fn args callback)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UI Helper functions
@@ -100,13 +107,16 @@
   [card]
   (let [options [(ss/button
                    :text "Play"
-                   :listen [:action #(ss/return-from-dialog % :ok)])
+                   :listen [:action (fn [e] (update-state g/play-card [card]))])
                  (ss/button
                    :text "Select"
-                   #_#_:listen [:action (update-state g/buy-card nil card)])
+                   #_#_:listen [:action (fn [e] (update-state g/select-card [card]))])
                  (ss/button
                    :text "Stage"
-                   #_#_:listen [:action (update-state g/buy-card nil card)])]]
+                   #_#_:listen [:action (fn [e] (update-state g/stage-card [card]))])
+                 (ss/button
+                   :text "Cancel"
+                   #_#_:listen [:action #(ss/return-from-dialog % :ok)])]]
     (ss/dialog :content "What would you like to do?"
                :options options)))
 
@@ -121,7 +131,7 @@
   (let [hand-cards (:hand player)
         hand-panel  (->> (for [card hand-cards]
                            (let [action (fn [e]
-                                          (-> (hand-selection-dialog (first card))
+                                          (-> (hand-selection-dialog card)
                                               ss/pack!
                                               ss/show!))]
                              (build-card-panel card :on-click action)))
@@ -144,10 +154,11 @@
                    :listen [:action #(ss/return-from-dialog % :ok)])
                  (ss/button
                    :text "Buy"
-                   #_#_:listen [:action (update-state g/buy-card nil card)])
+                   #_#_:listen [:action (fn [e] (update-state g/buy-card card))])
                  (ss/button
                    :text "Claim"
-                   #_#_:listen [:action (update-state g/buy-card nil card)])]]
+                   ;; TODO: Implement claiming cards
+                   #_#_:listen [:action (fn [e] (update-state g/buy-card card))])]]
     (ss/dialog :content "What would you like to do?"
                :options options)))
 
