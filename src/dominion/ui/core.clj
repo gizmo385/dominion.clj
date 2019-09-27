@@ -89,24 +89,43 @@
               :center card-description
               :south card-types}
         opts (cond-> opts
-               (some? tip) (assoc :tip tip)
-               (some? on-click) (assoc :listen [:mouse-clicked on-click]))]
+               tip (assoc :tip tip)
+               on-click (assoc :listen [:mouse-clicked on-click]))]
     (apply ss/border-panel (interleave (keys opts) (vals opts)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Building panels for the player's displays
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn build-multi-cards-panel [cards]
-  (->> cards
-       (map build-card-panel)
-       (ss/grid-panel :columns 5 :hgap 10 :vgap 20 :items)))
+ (defn hand-selection-dialog
+  [card]
+  (let [options [(ss/button
+                   :text "Play"
+                   :listen [:action #(ss/return-from-dialog % :ok)])
+                 (ss/button
+                   :text "Select"
+                   #_#_:listen [:action (update-state g/buy-card nil card)])
+                 (ss/button
+                   :text "Stage"
+                   #_#_:listen [:action (update-state g/buy-card nil card)])]]
+    (ss/dialog :content "What would you like to do?"
+               :options options)))
 
 (defn build-player-discard-panel [player]
-  (let [discard-panel (->> player :discard build-multi-cards-panel)]
+  (let [discard-panel (->> player
+                           :discard
+                           (map build-card-panel)
+                           (ss/grid-panel :columns 5 :hgap 10 :vgap 20 :items))]
     (ss/vertical-panel :items [(ss/label "Discard") discard-panel])))
 
 (defn build-player-hand-panel [player]
-  (let [hand-panel (->> player :hand build-multi-cards-panel)]
+  (let [hand-cards (:hand player)
+        hand-panel  (->> (for [card hand-cards]
+                           (let [action (fn [e]
+                                          (-> (hand-selection-dialog (first card))
+                                              ss/pack!
+                                              ss/show!))]
+                             (build-card-panel card :on-click action)))
+                         (ss/grid-panel :columns 5 :hgap 10 :vgap 20 :items))]
     (ss/vertical-panel :items [(ss/label "Hand") hand-panel])))
 
 (defn build-player-panel [player]
@@ -163,7 +182,7 @@
 (defn build-game-panel
   [pov-player]
   (let [supply-panel (build-supply-panel)
-        player-panel (-> get-state
+        player-panel (-> (get-state)
                          (get-in [:players pov-player])
                          build-player-panel)]
     (ss/border-panel
@@ -183,9 +202,9 @@
   (require '[dominion.card :as c])
   (require '[dominion.expansions.base :as base])
   (let [supply (g/build-supply 10 10 base/available-cards)
-        gs (g/build-game {:p1 p/base-player :p2 p/base-player} supply)
-        prov-gs (update-in gs [:players :p1 :discard] conj c/province)]
-    (-> prov-gs
+        gs (g/build-game {:p1 p/base-player :p2 p/base-player} supply)]
+    (-> gs
+        (update-in [:players :p1 :discard] conj c/province)
         atom
         ->AtomGameStateManager
         (build-frame :p1)
