@@ -1,29 +1,23 @@
 (ns dominion.expansions.base
-  "Defines cards that were present in the base Dominion game, except for the following
-  cards that are defined the dominion.card namespace:
-    Copper
-    Silver
-    Gold
-    Estate
-    Duchy
-    Provinces
-    Curses"
+  "Defines cards that were present in the base Dominion game."
   (:require
     [clojure.spec.alpha :as s]
     [dominion.actions :as a]
     [dominion.card :as c]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Kingdom Cards
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def smithy
   (c/new-card "Smithy" "+3 cards" 4 [::c/action] :actions (a/build :actions 3)))
 
 (def laboratory
-  (c/new-card "Laboratory" "+2 cards, +1 action"
-              5
-              [::c/action]
-              :actions (a/build :draw 2 :actions 1)))
+  (c/new-card
+    "Laboratory"
+    "+2 cards, +1 action"
+    5
+    [::c/action]
+    :actions (a/build :draw 2 :actions 1)))
 
 (def village
   (c/new-card "Village" "+1 card, +2 actions"
@@ -53,6 +47,20 @@
     4
     [::c/victory]
     :vp (c/card-count-vp 10 1)))
+
+(def chapel
+  (c/new-card
+    "Chapel"
+    "+1 Action. Discard any number of cards, then draw that many."
+    2
+    [::c/action]
+    :actions [(a/plus-actions-action 1)
+              (fn [game-state player-key]
+                (let [selected-cards (-> game-state :turn :selected)]
+                  (as-> game-state gs
+                    (update-in gs [:players player-key :discard] concat selected-cards)
+                    (assoc-in gs [:turn :selected] '())
+                    (a/draw-cards (count selected-cards) game-state player-key)))) ]))
 
 (def available-cards
   "Cards that are defined in the base game of dominion"
