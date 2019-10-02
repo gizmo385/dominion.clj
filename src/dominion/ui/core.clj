@@ -1,9 +1,11 @@
 (ns dominion.ui.core
   (:require
     [dominion.game :as g]
+    [dominion.proto.game :as gm]
     [seesaw.core :as ss]
     [seesaw.border :as b]
-    [clojure.string :as string]))
+    [clojure.string :as string])
+  (:import [dominion.proto.display DisplayManager]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Open Questions/Todo List
@@ -26,46 +28,15 @@
 ;     where would that be initially set?
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; UI State Context variables
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defprotocol GameStateManager
-  (get-state* [this])
-  (update-state* [this update-fn args]
-                 [this update-fn args callback]))
-
-(defrecord AtomGameStateManager [game-state]
-  GameStateManager
-  (get-state* [this] @(:game-state this))
-  (update-state* [this update-fn args]
-    (let [current-state (get-state* this)]
-      (apply swap! (:game-state this) update-fn current-state args)))
-  (update-state* [this update-fn args callback]
-    (update-state* this update-fn args)
-    (callback this)))
-
-
-(def ^:dynamic *game-state-manager*
-  "The game state manager is the way that any updates to the game state will be
-  performed in the context of the UI. It is used to abstract away the state management
-  from the UI code. Essentially, the UI will dispatch out state updates to the state
-  manager, and it will be the responsibility of the state manager to actually perform
-  those updates.
-
-  This means that you could easily have different state implementations for different
-  purposes. For example, state could be managed as a local atom for the purposes of
-  single-player testing, but instead be managed by some sort of synchronized network
-  state manager for multiplayer games connected to a centralized server."
-  nil)
-
-(defn get-state []
-  (get-state* *game-state-manager*))
-
-(defn update-state
-  ([update-fn args]
-   (update-state* *game-state-manager* update-fn args))
-  ([update-fn args callback]
-   (update-state* *game-state-manager* update-fn args callback)))
+(defrecord FrameDisplayManager [frame render-fn]
+  DisplayManager
+  (render-game-state* [this]
+    (let [new-content (render-fn)]
+      (ss/value! frame :content new-content)))
+  (render-error* [this error]
+    (ss/alert :title "Error!"
+              :type :error
+              (.getMessage error))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UI Helper functions
@@ -107,16 +78,18 @@
   [card]
   (let [options [(ss/button
                    :text "Play"
-                   :listen [:action (fn [e] (update-state g/play-card [card]))])
+                   :listen [:action (fn [e]
+                                      (println :gm gm/*game-manager*)
+                                      (gm/update-game g/play-card [card]))])
                  (ss/button
                    :text "Select"
-                   #_#_:listen [:action (fn [e] (update-state g/select-card [card]))])
+                   :listen [:action (fn [e] (gm/update-game g/select-card [card]))])
                  (ss/button
                    :text "Stage"
-                   #_#_:listen [:action (fn [e] (update-state g/stage-card [card]))])
+                   :listen [:action (fn [e] (gm/update-game g/stage-card [card]))])
                  (ss/button
                    :text "Cancel"
-                   #_#_:listen [:action #(ss/return-from-dialog % :ok)])]]
+                   :listen [:action #(ss/return-from-dialog % :ok)])]]
     (ss/dialog :content "What would you like to do?"
                :options options)))
 
@@ -154,11 +127,12 @@
                    :listen [:action #(ss/return-from-dialog % :ok)])
                  (ss/button
                    :text "Buy"
-                   #_#_:listen [:action (fn [e] (update-state g/buy-card card))])
+                   :listen [:action (fn [e] (gm/update-game g/buy-card card))])
                  (ss/button
                    :text "Claim"
                    ;; TODO: Implement claiming cards
-                   #_#_:listen [:action (fn [e] (update-state g/buy-card card))])]]
+                   :listen [:action #(ss/return-from-dialog % :ok)]
+                   #_#_:listen [:action (fn [e] (gm/update-game g/buy-card card))])]]
     (ss/dialog :content "What would you like to do?"
                :options options)))
 
@@ -178,12 +152,12 @@
 (defn build-supply-panel
   "Given a game state, builds the panel for the game states current supply."
   []
-  (let [supply-cards (some->> (get-state) :supply vals)
+  (let [supply-cards (some->> (gm/get-state) :supply vals)
         supply-stacks (map build-supply-stack-panel supply-cards)]
     (ss/grid-panel :rows 3 :columns 7 :hgap 20 :vgap 20 :items supply-stacks)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Building the menus for the game
+; TODO: Building the menus for the game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -193,7 +167,7 @@
 (defn build-game-panel
   [pov-player]
   (let [supply-panel (build-supply-panel)
-        player-panel (-> (get-state)
+        player-panel (-> (gm/get-state)
                          (get-in [:players pov-player])
                          build-player-panel)]
     (ss/border-panel
@@ -202,22 +176,31 @@
       :center supply-panel
       :south player-panel)))
 
-(defn build-frame [game-state-manager pov-player]
-  (binding [*game-state-manager* game-state-manager]
-    (let [game-panel (build-game-panel pov-player)]
-      (ss/frame :title "Dominion" :content game-panel))))
+(defn build-frame [pov-player]
+  (let [game-panel (build-game-panel pov-player)]
+    (ss/frame :title "Dominion" :content game-panel)))
+
+(defn start-frame!
+  [frame pov-player]
+  (let [render-fn (partial build-game-panel pov-player)
+        display-manager (->FrameDisplayManager frame render-fn)]
+    (with-redefs [dm/*display-manager* display-manager]
+      (-> frame ss/pack! ss/show!))))
 
 (comment
   (require '[dominion.game :as g])
   (require '[dominion.player :as p])
   (require '[dominion.card :as c])
   (require '[dominion.expansions.base :as base])
+  (require '[dominion.proto.state :as sm])
+
+  ;;; TODO: This doesn't work because the bindings doesn't appear to be picked up in
+  ;;; the Swing event thread?
   (let [supply (g/build-supply 10 10 base/available-cards)
-        gs (g/build-game {:p1 p/base-player :p2 p/base-player} supply)]
-    (-> gs
-        (update-in [:players :p1 :discard] conj c/province)
-        atom
-        ->AtomGameStateManager
-        (build-frame :p1)
-        ss/pack!
-        ss/show!)))
+        gs (g/build-game {:p1 p/base-player :p2 p/base-player} supply)
+        gsm (-> gs atom sm/->AtomGameStateManager)]
+    (with-redefs [sm/*game-state-manager* gsm
+              gm/*game-manager* (gm/->SimpleGameManager)]
+      (-> (build-frame :p1)
+          (start-frame! :p1))))
+  )
