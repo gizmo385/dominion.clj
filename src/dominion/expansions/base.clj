@@ -69,10 +69,6 @@
     [::c/action]
     :actions (a/build :money 2 :buy 1)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TODO: Think about how to generalize 'perform action on every other player' in the
-;;; game.clj file as this is a common motif amongst cards in the game.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def witch
   (c/new-card
     "Witch"
