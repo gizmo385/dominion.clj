@@ -30,10 +30,10 @@
 
 (defrecord FrameDisplayManager [frame render-fn]
   DisplayManager
-  (render-game-state* [this]
+  (render-game-state [this]
     (let [new-content (render-fn)]
       (ss/value! frame :content new-content)))
-  (render-error* [this error]
+  (render-error [this error]
     (ss/alert :title "Error!"
               :type :error
               (.getMessage error))))
@@ -60,13 +60,12 @@
                         (map name)
                         (string/join " * ")
                         ss/label)
-        opts {:border (build-border)
-              :tip tip
-              :size (dimension 50 125)
-              :north card-title
-              :center card-description
-              :south card-types}
-        opts (cond-> opts
+        opts (cond-> {:border (build-border)
+                      :tip tip
+                      :size (dimension 50 125)
+                      :north card-title
+                      :center card-description
+                      :south card-types}
                tip (assoc :tip tip)
                on-click (assoc :listen [:mouse-clicked on-click]))]
     (apply ss/border-panel (interleave (keys opts) (vals opts)))))
@@ -78,15 +77,13 @@
   [card]
   (let [options [(ss/button
                    :text "Play"
-                   :listen [:action (fn [e]
-                                      (println :gm gm/*game-manager*)
-                                      (gm/update-game g/play-card [card]))])
+                   :listen [:action (fn [e] (gm/update-game g/play-card card))])
                  (ss/button
                    :text "Select"
-                   :listen [:action (fn [e] (gm/update-game g/select-card [card]))])
+                   :listen [:action (fn [e] (gm/update-game g/select-card card))])
                  (ss/button
                    :text "Stage"
-                   :listen [:action (fn [e] (gm/update-game g/stage-card [card]))])
+                   :listen [:action (fn [e] (gm/update-game g/stage-card card))])
                  (ss/button
                    :text "Cancel"
                    :listen [:action #(ss/return-from-dialog % :ok)])]]
@@ -182,10 +179,9 @@
 
 (defn start-frame!
   [frame pov-player]
-  (let [render-fn (partial build-game-panel pov-player)
-        display-manager (->FrameDisplayManager frame render-fn)]
-    (with-redefs [dm/*display-manager* display-manager]
-      (-> frame ss/pack! ss/show!))))
+  (let [render-fn (partial build-game-panel pov-player)]
+    (gm/set-managers! :display (->FrameDisplayManager frame render-fn))
+    (-> frame ss/pack! ss/show!)))
 
 (comment
   (require '[dominion.game :as g])
@@ -199,8 +195,7 @@
   (let [supply (g/build-supply 10 10 base/available-cards)
         gs (g/build-game {:p1 p/base-player :p2 p/base-player} supply)
         gsm (-> gs atom sm/->AtomGameStateManager)]
-    (with-redefs [sm/*game-state-manager* gsm
-              gm/*game-manager* (gm/->SimpleGameManager)]
-      (-> (build-frame :p1)
-          (start-frame! :p1))))
+    (await (gm/set-managers! :state gsm))
+    (-> (build-frame :p1)
+        (start-frame! :p1)))
   )
