@@ -3,29 +3,33 @@
     [dominion.proto.state :as sm]
     [dominion.proto.display :as dm]))
 
-(defprotocol GameManager
-  "The Game Manager protocol essentially acts as a bridge between the State Manager
-  protocol and the "
-  (update-game* [update-fn & args])
-  (get-state* [this]))
 
-(def ^:dynamic *game-manager*
-  nil)
+(def game-agent
+  (agent {:display nil
+          :state nil}
+         :error-handler (fn [a error] (restart-agent a @a))))
+
+(defn update-game-agent
+  "Convinience function that wraps `send` calls to an agent to pull out and update a
+  particular key"
+  [a k update-fn & args]
+  (send a (fn [agent-state]
+            (let [new-value (apply update-fn (get agent-state k) args)]
+              (assoc agent-state k new-value)))))
 
 (defn update-game
-  [update-fn & args]
-  (apply update-game* *game-manager* update-fn args))
+  [state-update-fn & args]
+  (as-> game-agent ga
+    (apply update-game-agent ga :state sm/update-state state-update-fn args)
+    (update-game-agent ga :display dm/render-game-state)))
 
 (defn get-state []
-  (get-state* *game-manager*))
+  (some-> @game-agent
+          (get :state)
+          (sm/get-state)))
 
-(defrecord SimpleGameManager []
-  GameManager
-  (update-game* [this update-fn args]
-    (try
-      (apply sm/update-state update-fn args)
-      (dm/render-game-state)
-      (catch Exception e
-        (dm/render-error  e))))
-  (get-state* [this]
-    (sm/get-state)))
+(defn set-managers! [& {:keys [display state]}]
+  (let [managers (cond-> []
+                   display (concat [:display display])
+                   state (concat [:state state]))]
+    (apply send game-agent assoc managers)))
