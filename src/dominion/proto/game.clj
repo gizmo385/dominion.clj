@@ -1,35 +1,21 @@
 (ns dominion.proto.game
-  (:require
-    [dominion.proto.state :as sm]
-    [dominion.proto.display :as dm]))
+  (:require [dominion.proto.display :as dm]))
 
+(defprotocol GameManager
+  (update-game! [this state-update-fn args])
+  (current-player [this])
+  (get-state [this])
+  (render [this render-fn args]))
 
-(def game-agent
-  (agent {:display nil
-          :state nil}
-         :error-handler (fn [a error] (restart-agent a @a))))
-
-(defn update-game-agent
-  "Convinience function that wraps `send` calls to an agent to pull out and update a
-  particular key"
-  [a k update-fn & args]
-  (send a (fn [agent-state]
-            (let [new-value (apply update-fn (get agent-state k) args)]
-              (assoc agent-state k new-value)))))
-
-(defn update-game
-  [state-update-fn & args]
-  (as-> game-agent ga
-    (apply update-game-agent ga :state sm/update-state state-update-fn args)
-    (update-game-agent ga :display dm/render-game-state)))
-
-(defn get-state []
-  (some-> @game-agent
-          (get :state)
-          (sm/get-state)))
-
-(defn set-managers! [& {:keys [display state]}]
-  (let [managers (cond-> []
-                   display (concat [:display display])
-                   state (concat [:state state]))]
-    (apply send game-agent assoc managers)))
+(defrecord SimpleGameManager [game-state-atom display-manager]
+  GameManager
+  (update-game! [this state-update-fn args]
+    (let [old-state (get-state this)
+          new-state (apply state-update-fn old-state args)]
+      (reset! (:game-state-atom this) new-state)))
+  (current-player [this]
+    (some->> this :game-state-atom deref :player-order first))
+  (get-state [this]
+    (-> this :game-state-atom deref))
+  (render [this render-fn args]
+    (apply render-fn (:display-manager this) this args)))

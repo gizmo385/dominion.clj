@@ -91,10 +91,10 @@
   builtin cards that should be added to any game of dominion. Additionally, a value
   can be supplied for the number of treasure cards added to the game."
   [vp-count curse-count & {:keys [treasure-count] :or {treasure-count 100}}]
-  {(:key estate) (repeat vp-count estate)
-   (:key duchy) (repeat vp-count duchy)
-   (:key province) (repeat vp-count province)
-   (:key curse) (repeat curse-count curse)
-   (:key copper) (repeat treasure-count copper)
-   (:key silver) (repeat treasure-count silver)
-   (:key gold) (repeat treasure-count gold)})
+  {(:key estate)    (repeat vp-count estate)
+   (:key duchy)     (repeat vp-count duchy)
+   (:key province)  (repeat vp-count province)
+   (:key curse)     (repeat curse-count curse)
+   (:key copper)    (repeat treasure-count copper)
+   (:key silver)    (repeat treasure-count silver)
+   (:key gold)      (repeat treasure-count gold)})

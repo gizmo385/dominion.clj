@@ -9,6 +9,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Output helper functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn read-user-line [prompt]
+  (print (str prompt " "))
+  (flush)
+  (read-line))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Output helper functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn interleave-lines [lines spacer]
   (lazy-seq
     (let [first-lines (map first lines)]
@@ -29,17 +37,17 @@
 ; Terminal command implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmulti handle-command
-  (fn [command args] command))
+  (fn [game-manager command args] command))
 
-(defmethod handle-command :pass [& _]
-  (gm/update-game g/next-turn)
+(defmethod handle-command :pass [game-manager command args]
+  (gm/update-game! game-manager g/next-turn [])
   true)
 
 (defmethod handle-command :exit [& _]
   true)
 
 (defmethod handle-command :default
-  [command args]
+  [game-manager command args]
   (if-let [command-name (first command)]
     (printf "Unknown command, please try again: %s\n" command-name)
     (printf "Invalid input!\n")))
@@ -88,30 +96,30 @@
     (interleave-multiline-strings [hand discard] \tab)))
 
 (defn game-state->terminal
-  ([] (game-state->terminal (gm/get-state)))
-  ([game-state]
-   (let [current-player (-> game-state :player-order first)
-         player (get-in game-state [:players current-player])]
-     (str
-       "Current Supply"
-       (render-supply (:supply game-state))
-       \newline
-       \newline
-       (render-player player)))))
+  [game-manager]
+  (let [game-state (gm/get-state game-manager)
+        current-player (-> game-state :player-order first)
+        player (get-in game-state [:players current-player])]
+    (str
+      "Current Supply\n"
+      "=============="
+      (render-supply (:supply game-state))
+      \newline
+      \newline
+      (render-player player))))
 
 (defn available-actions
-  ([pov-player] (available-actions pov-player (gm/get-state)))
-  ([pov-player game-state]
-   (if (= pov-player (-> game-state :player-order first))
-     {:buy    "Buy [Card Name]"
-      :claim  "Claim [Card Name]"
-      :play   "Play [Card Name]"
-      :select "Select [Card Name]"
-      :stage  "Stage [Card Name]"
-      :pass   "Pass"
-      :exit   "Exit"}
-     {:reveal "Reveal [Card Name]"
-      :exit   "Exit"})))
+  [game-manager pov-player]
+  (if (= pov-player (gm/current-player game-manager))
+    {:buy    "Buy [Card Name]"
+     :claim  "Claim [Card Name]"
+     :play   "Play [Card Name]"
+     :select "Select [Card Name]"
+     :stage  "Stage [Card Name]"
+     :pass   "Pass"
+     :exit   "Exit"}
+    {:reveal "Reveal [Card Name]"
+     :exit   "Exit"}))
 
 (defn get-command-input []
   (let [split-input (s/split (read-line) #"\s+")]
@@ -120,34 +128,50 @@
       (rest split-input))))
 
 (defn present-ui
-  ([pov-player]
-   (present-ui pov-player (gm/get-state)))
-
-  ([pov-player game-state]
-   (print (game-state->terminal game-state))
-   (let [actions (available-actions pov-player game-state)]
-     (println "Available actions:")
-     (println "------------------")
-     (->> actions vals (s/join \newline) println)
-     (println "------------------")
-     (loop []
-       (let [[command args] (get-command-input)]
-         (if (get actions command)
-           (handle-command command args)
-           (do
-             (println "Invalid command!")
-             (recur))))
-       )
-     true)))
+  [game-manager pov-player]
+  (print (game-state->terminal game-manager))
+  (let [actions (available-actions game-manager pov-player)]
+    (println "Available actions:")
+    (println "------------------")
+    (->> actions vals (s/join \newline) println)
+    (println "------------------")
+    (loop []
+      (let [[command args] (get-command-input)]
+        (if (get actions command)
+          (handle-command game-manager command args)
+          (do
+            (println "Invalid command!")
+            (recur))))
+      )
+    true))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Display manager implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defrecord TerminalDisplayManager [pov-player]
   DisplayManager
-  (render-game-state [this]
-    (present-ui (:pov-player this)))
-  (render-error [this error]
+  (render-game-state [this game-manager]
+    (present-ui game-manager (:pov-player this)))
+
+  (render-user-prompt [this game-manager user-prompt responses callback]
+    (let [enumerated-options (zipmap (map (comp str inc) (range)) responses)
+          options-str (->> enumerated-options
+                          (map (partial s/join ": "))
+                          (s/join "\n"))]
+      (println options-str)
+      (loop [user-response (read-user-line user-prompt)]
+        (cond
+          ;; Is the response EOL? If so, exit
+          (nil? user-response) nil
+
+          ;; Is it a valid response? If so, let's hit the callback
+          (get enumerated-options user-response)
+          (callback (get enumerated-options user-response) game-manager)
+
+          ;; Otherwise, we'll prompt again
+          :else (recur (read-user-line "Please select a valid option: "))))))
+
+  (render-error [this game-manager error]
     (binding [*out* *err*]
       (println (.getMessage error)))))
 

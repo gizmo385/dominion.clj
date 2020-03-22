@@ -185,6 +185,13 @@
         ;; Move the card to the :played section of the turn
         (update-in [:turn :played] conj card))))
 
+(defn discard-card
+  [game-state card & {:keys [player-key]}]
+  (let [pk (or player-key (-> game-state :player-order first))]
+    (-> game-state
+        (update-in [:players pk :hand] #(u/remove-once #{card} %1))
+        (update-in [:players pk :discard] conj card))))
+
 (defn trash-card
   "Moves a card from the player's hand to the trash."
   [game-state card & {:keys [player-key]}]
